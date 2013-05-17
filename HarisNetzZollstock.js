@@ -9,18 +9,36 @@ var TcpPort = 14444;
 
 var millisecondsToMeasure = 1000;
 var PerfCount = {
-	UdpAllBytes 	: 0,
-	UdpBytes 		: 0,
-	TcpAllBytes		: 0,
-	TcpBytes 		: 0,
-	TcpConns 		: 0
+	All : { 
+		UdpBytes 	: 0,
+		TcpBytes 	: 0,
+		TcpConns	: 0
+	},
+	Second : {
+		UdpBytes 	: 0,
+		UdpPackets	: 0,
+		TcpBytes 	: 0,
+		TcpPackets	: 0
+	}
 };
+//
+// CTRL-C
+//
+process.on( 'SIGINT', function() {
+  console.log("\ngracefully shutting down from SIGINT (Crtl-C)" )
+  console.log("closing UDP port");
+  UdpSrv.close();
+  console.log("closing TCP port");
+  TcpSrv.close();
+  process.exit( )
+})
 //
 // UDP
 //
 UdpSrv.on("message", function (buf, rinfo) {
-	PerfCount.UdpBytes 		+= buf.length;
-	PerfCount.UdpAllBytes 	+= buf.length;
+	PerfCount.Second.UdpBytes 		+= buf.length;
+	PerfCount.Second.UdpPackets		+= 1;
+	PerfCount.All.UdpBytes 			+= buf.length;
 });
 UdpSrv.on("listening", function() {
 	var addr = UdpSrv.address();
@@ -40,15 +58,16 @@ TcpSrv.on("connection", function (socket) {
 	var MySockPort = socket.remotePort;
 	
 	console.log("Tcp connect from [%s:%d]", socket.remoteAddress, socket.remotePort);
-	PerfCount.TcpConns += 1;
+	PerfCount.All.TcpConns += 1;
 	
 	socket.on("close", function() {
 		console.log("Tcp disconnect from [%s:%d]", MySockAddr, MySockPort);
-		PerfCount.TcpConns -= 1;
+		PerfCount.All.TcpConns -= 1;
 	});
 	socket.on("data", function (buf) {
-		PerfCount.TcpBytes 		+= buf.length;
-		PerfCount.TcpAllBytes 	+= buf.length;
+		PerfCount.Second.TcpBytes 		+= buf.length;
+		PerfCount.Second.TcpPackets		+= 1;
+		PerfCount.All.TcpBytes 			+= buf.length;
 	});
 });
 TcpSrv.listen(TcpPort);
@@ -57,16 +76,23 @@ TcpSrv.listen(TcpPort);
 //
 setInterval(function() {
 
-	var udpcount = PerfCount.UdpBytes;
-	var tcpcount = PerfCount.TcpBytes;
-	PerfCount.UdpBytes = 0;
-	PerfCount.TcpBytes = 0;
-
-	process.stdout.write("UDP: [" + bytesToSize(udpcount) + "]/s | TCP: [" 
-		+ bytesToSize(tcpcount) + "]/s | Tcp connections: "
-		+ PerfCount.TcpConns + "                \r");
+	console.log("UDP: [%s]/s [%d] pkt/s | TCP: [%s]/s [%d] pkt/s [%d] connections open",
+		bytesToSize(PerfCount.Second.UdpBytes),
+		PerfCount.Second.UdpPackets,
+		bytesToSize(PerfCount.Second.TcpBytes),
+		PerfCount.Second.TcpPackets,
+		PerfCount.All.TcpConns);
+		
+	resetCounters();
 		
 }, millisecondsToMeasure);
+//
+function resetCounters() {
+	PerfCount.Second.TcpBytes 	= 0;
+	PerfCount.Second.TcpPackets = 0;
+	PerfCount.Second.UdpBytes 	= 0;
+	PerfCount.Second.UdpPackets = 0;
+}
 //
 // tools
 //

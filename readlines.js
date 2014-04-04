@@ -12,9 +12,6 @@ var inputfilename = WScript.Arguments(0);
 eachLine( inputfilename, function(line) {
 	WScript.StdOut.WriteLine(line);
 });
-
-out.close();
-
 // ----------------------------------------------------------------------------
 // utils
 // ----------------------------------------------------------------------------

@@ -5,16 +5,16 @@ var portToForward = 18888;
 var server6 = net.createServer(function(sock6) { //'connection' listener
 	console.log('connection from: ' + sock6.remoteAddress);
 	
-	var conn4 = net.connect({port: portToForward}, function() { 
+	var sock4 = net.connect({port: portToForward}, function() { 
 		//console.log('connected to ipv4 port');
 		
-		conn4.pipe(sock6);
-		sock6.pipe(conn4);
+		sock4.pipe(sock6);
+		sock6.pipe(sock4);
 		
 	}); 
 	
 	sock6.on('end', function() {
-		conn4.end();
+		sock4.end();
 	});
 });
 
@@ -22,6 +22,6 @@ var server6 = net.createServer(function(sock6) { //'connection' listener
 var ip6toListen = process.argv[2];
 
 server6.listen(portToForward, ip6toListen, function() { //'listening' listener
-  console.log('6to4 server is listening on nterface ' + ip6toListen + " port: " + portToForward);
+  console.log('6to4 server is listening on interface ' + ip6toListen + " port: " + portToForward);
   console.dir( server6.address() );
 });
